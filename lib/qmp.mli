@@ -36,7 +36,7 @@ type fd_info = {
 }
 
 type result =
-    Name_list of string list
+  | Name_list of string list
   | Enabled of enabled
   | Status of string
   | Vnc of vnc
@@ -71,6 +71,11 @@ type command =
   | Query_xen_platform_pv_driver_info
   | Stop
   | Cont
+  | Qom_list of string
+  | UsbType_add of string * string 
+  | UsbDevice_add of string * string * string * string * string
+  | UsbDevice_del of string
+
   | Eject of string * bool option
   | Change of string * string * string option
   | System_powerdown

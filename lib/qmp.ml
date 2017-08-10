@@ -47,6 +47,11 @@ type fd_info = {
   fdset_id : int;
 }
 
+type usbdevice = {
+  bus: string;
+  hostbus: string;
+  hostport: string;
+}
 type command =
   | Qmp_capabilities
   | Query_commands
@@ -56,6 +61,11 @@ type command =
   | Query_xen_platform_pv_driver_info
   | Stop
   | Cont
+  | Qom_list of string
+  | UsbType_add of string * string 
+  | UsbDevice_add of string * string * string * string * string
+  | UsbDevice_del of string
+
   | Eject of string * bool option
   | Change of string * string * string option
   | System_powerdown
@@ -143,6 +153,24 @@ let message_of_string x =
       | "query-vnc" -> Query_vnc
       | "query-kvm" -> Query_kvm
       | "query-xen-platform-pv-driver-info" -> Query_xen_platform_pv_driver_info
+      | "qom-list" ->
+          let arguments = assoc (List.assoc "arguments" list) in
+            Qom_list (string (List.assoc "path" arguments))
+      | "deivce_add" ->
+          let arguments = assoc (List.assoc "arguments" list) in
+            if (List.mem_assoc "bus" arguments && List.mem_assoc "hostbus" arguments && List.mem_assoc "hostport" arguments) then
+              UsbDevice_add (string (List.assoc "driver" arguments),
+                       string (List.assoc "id" arguments),
+                       string (List.assoc "bus" arguments),
+                       string (List.assoc "hostbus" arguments),
+                       string (List.assoc "hostport" arguments))
+            else 
+              UsbType_add (string (List.assoc "driver" arguments),
+                       string (List.assoc "id" arguments))
+      | "device_del" ->
+          let arguments = assoc (List.assoc "arguments" list) in
+            UsbDevice_del (string (List.assoc "id" arguments))
+
       | "eject" ->
             let arguments = assoc (List.assoc "arguments" list) in
             Eject (string (List.assoc "device" arguments),
@@ -236,6 +264,12 @@ let json_of_message = function
       | Query_vnc -> "query-vnc", []
       | Query_kvm -> "query-kvm", []
       | Query_xen_platform_pv_driver_info -> "query-xen-platform-pv-driver-info", []
+      | Qom_list (path) -> "qom-list", [ "path", `String path ]
+      | UsbType_add (driver, id) -> "device_add", [ "driver", `String driver; "id", `String id]
+      | UsbDevice_add (driver, id, bus, hostbus, hostport) -> 
+         "device_add", [ "driver", `String driver; "id", `String id ; "bus", `String bus; "hostbus", `String hostbus; "hostport", `String hostport]
+      | UsbDevice_del (id) -> "device_del", [ "id", `String id ]
+
       | Eject (device, None) -> "eject", [ "device", `String device ]
       | Eject (device, Some force) -> "eject", [ "device", `String device; "force", `Bool force ]
       | Change (device, target, None) -> "change", [ "device", `String device; "target", `String target ]
