@@ -37,6 +37,7 @@ type fd_info = {
 
 type result =
   | Name_list of string list
+  | NameType_list of (string * string) list
   | Enabled of enabled
   | Status of string
   | Vnc of vnc

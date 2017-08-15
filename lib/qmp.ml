@@ -52,6 +52,7 @@ type usbdevice = {
   hostbus: string;
   hostport: string;
 }
+
 type command =
   | Qmp_capabilities
   | Query_commands
@@ -77,6 +78,7 @@ type command =
 
 type result =
   | Name_list of string list
+  | NameType_list of (string * string) list
   | Enabled of enabled
   | Status of string
   | Vnc of vnc
@@ -237,6 +239,10 @@ let message_of_string x =
         with e ->
           Error(None, { cls = "JSONParsing"; descr = (Printf.sprintf "%s:%s" (Printexc.to_string e) x) })
         )
+      | `List ((`Assoc [("name", _);("type",_)] :: _) as list) ->
+        Success (id, NameType_list (List.map (function 
+                              | `Assoc [("name", `String x); ("type", `String y)] -> (x, y)
+                              | _ -> failwith "assoc") list))
       | x -> failwith (Printf.sprintf "unknown result %s" (Yojson.Safe.to_string x))
     )
   | `Assoc list when List.mem_assoc "error" list ->
@@ -292,6 +298,7 @@ let json_of_message = function
       | Status s -> `Assoc [ "status", `String s ]
       | Enabled {enabled; present} -> `Assoc [ "enabled", `Bool enabled; "present", `Bool present ]
       | Name_list xs -> `List (List.map (fun x -> `Assoc [ "name", `String x ]) xs)
+      | NameType_list xs -> `List (List.map (fun (x,y) -> `Assoc [ ("name", `String x); ("type",`String y) ]) xs)
       | Vnc {enabled; auth; family; service; host} -> `Assoc [ "enabled", `Bool enabled; "auth", `String auth; "family", `String family; "service", `String (string_of_int service); "host", `String host ]
       | Xen_platform_pv_driver_info { product_num; build_num } -> `Assoc [ "product-num", `Int product_num; "build-num", `Int build_num; ]
       | Fd_info {fd; fdset_id} -> `Assoc [ "fd", `Int fd; "fdset-id", `Int fdset_id ]
